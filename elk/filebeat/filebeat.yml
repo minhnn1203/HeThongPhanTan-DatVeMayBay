@@ -1,0 +1,14 @@
+filebeat.inputs:
+  - type: filestream
+    id: spring-service-logs
+    paths:
+      - /var/log/app/*.log
+    parsers:
+      - multiline:
+          type: pattern
+          pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+          negate: true
+          match: after
+
+output.logstash:
+  hosts: ["logstash:5044"]

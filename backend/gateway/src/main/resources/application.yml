@@ -1,0 +1,44 @@
+server:
+  port: 8080
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  cloud:
+    gateway:
+      routes:
+        - id: user-service
+          uri: http://user-service:8081
+          predicates:
+            - Path=/api/users/**
+        - id: product-service
+          uri: http://product-service:8082
+          predicates:
+            - Path=/api/products/**
+        - id: flight-service
+          uri: http://product-service:8082
+          predicates:
+            - Path=/api/flights/**
+        - id: order-service
+          uri: http://order-service:8083
+          predicates:
+            - Path=/api/orders/**
+        - id: notification-service
+          uri: http://notification-service:8084
+          predicates:
+            - Path=/api/notifications/**
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+logging:
+  file:
+    name: /var/log/app/api-gateway.log

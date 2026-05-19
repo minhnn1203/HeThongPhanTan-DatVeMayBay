@@ -1,0 +1,175 @@
+services:
+  oracle:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: oracle-db
+    environment:
+      ORACLE_PASSWORD: oraclepwd
+    ports:
+      - "1521:1521"
+      - "5500:5500"
+    volumes:
+      - ./oracle-init:/container-entrypoint-initdb.d
+      - oracle-data:/opt/oracle/oradata
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.13.4
+    container_name: logstash
+    depends_on:
+      - elasticsearch
+    ports:
+      - "5044:5044"
+    volumes:
+      - ./elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: kibana
+    depends_on:
+      - elasticsearch
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.13.4
+    container_name: filebeat
+    user: root
+    command: ["--strict.perms=false"]
+    depends_on:
+      - logstash
+    volumes:
+      - ./elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - app-logs:/var/log/app:ro
+
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+
+  user-service:
+    build:
+      context: ./backend/user-service
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - oracle
+      - zipkin
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    volumes:
+      - app-logs:/var/log/app
+
+  product-service:
+    build:
+      context: ./backend/product-service
+    container_name: product-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - oracle
+      - kafka
+      - zipkin
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    volumes:
+      - app-logs:/var/log/app
+
+  order-service:
+    build:
+      context: ./backend/order-service
+    container_name: order-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - oracle
+      - kafka
+      - user-service
+      - product-service
+      - zipkin
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    volumes:
+      - app-logs:/var/log/app
+
+  notification-service:
+    build:
+      context: ./backend/notification-service
+    container_name: notification-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - oracle
+      - kafka
+      - zipkin
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    volumes:
+      - app-logs:/var/log/app
+
+  gateway:
+    build:
+      context: ./backend/gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+      - notification-service
+      - zipkin
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+    volumes:
+      - app-logs:/var/log/app
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: microservice-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway
+
+volumes:
+  oracle-data:
+  app-logs:

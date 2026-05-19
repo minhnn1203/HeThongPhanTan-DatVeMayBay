@@ -1,0 +1,30 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:oracle:thin:@oracle:1521/XEPDB1
+    username: USER_APP
+    password: userpwd
+    driver-class-name: oracle.jdbc.OracleDriver
+  jpa:
+    database-platform: org.hibernate.dialect.OracleDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+logging:
+  file:
+    name: /var/log/app/user-service.log

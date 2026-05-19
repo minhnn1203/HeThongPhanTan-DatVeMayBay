@@ -1,0 +1,43 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: jdbc:oracle:thin:@oracle:1521/XEPDB1
+    username: PRODUCT_APP
+    password: productpwd
+    driver-class-name: oracle.jdbc.OracleDriver
+  jpa:
+    database-platform: org.hibernate.dialect.OracleDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  kafka:
+    bootstrap-servers: kafka:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.example.productservice.event
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.example.productservice.event.OrderCreatedEvent
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+logging:
+  file:
+    name: /var/log/app/flight-service.log
