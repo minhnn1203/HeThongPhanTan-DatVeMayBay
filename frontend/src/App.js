@@ -1,65 +1,148 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { login, register } from './api';
+import './styles.css';
 
-const apiBase = 'http://localhost:8080/api';
+const initialAuth = {
+  username: '',
+  password: '',
+  fullName: '',
+  email: ''
+};
 
 function App() {
-  const [users, setUsers] = useState([]);
-  const [flights, setFlights] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [form, setForm] = useState({ userId: '', flightId: '', quantity: 1 });
+  const [mode, setMode] = useState('login');
+  const [authForm, setAuthForm] = useState(initialAuth);
+  const [message, setMessage] = useState(null);
+  const [messageType, setMessageType] = useState('success');
+  const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    fetch(`${apiBase}/users`).then(r => r.json()).then(setUsers).catch(console.error);
-    fetch(`${apiBase}/flights`).then(r => r.json()).then(setFlights).catch(console.error);
-    fetch(`${apiBase}/orders`).then(r => r.json()).then(setOrders).catch(console.error);
-  }, []);
-
-  const createOrder = async () => {
-    const body = {
-      userId: Number(form.userId),
-      flightId: Number(form.flightId),
-      quantity: Number(form.quantity)
-    };
-    await fetch(`${apiBase}/orders`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    window.location.reload();
+  const handleChange = (field) => (event) => {
+    setAuthForm({ ...authForm, [field]: event.target.value });
   };
 
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setMessage(null);
+
+    try {
+      if (mode === 'login') {
+        const result = await login({ username: authForm.username, password: authForm.password });
+        if (result.token) {
+          setUser({ username: authForm.username, fullName: result.fullName || authForm.username });
+          setMessageType('success');
+          setMessage('Đăng nhập thành công! Chào mừng bạn đến hệ thống bán vé.');
+        } else {
+          throw new Error(result.message || 'Đăng nhập thất bại');
+        }
+      } else {
+        const result = await register({
+          username: authForm.username,
+          password: authForm.password,
+          fullName: authForm.fullName,
+          email: authForm.email
+        });
+        if (result.id || result.username) {
+          setMessageType('success');
+          setMessage('Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.');
+          setMode('login');
+          setAuthForm({ ...initialAuth, username: authForm.username });
+        } else {
+          throw new Error(result.message || 'Đăng ký thất bại');
+        }
+      }
+    } catch (error) {
+      setMessageType('error');
+      setMessage(error.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+    }
+  };
+
+  const isLogin = mode === 'login';
+
   return (
-    <div style={{ padding: 24, fontFamily: 'Arial, sans-serif' }}>
-      <h1>Flight Booking Microservices</h1>
-
-      <section>
-        <h2>Users</h2>
-        <pre>{JSON.stringify(users, null, 2)}</pre>
-      </section>
-
-      <section>
-        <h2>Flights</h2>
-        <pre>{JSON.stringify(flights, null, 2)}</pre>
-      </section>
-
-      <section>
-        <h2>Orders</h2>
-        <pre>{JSON.stringify(orders, null, 2)}</pre>
-      </section>
-
-      <section>
-        <h2>Create Order</h2>
-        <div>
-          <label>User ID <input value={form.userId} onChange={e => setForm({ ...form, userId: e.target.value })} /></label>
+    <div className="app-shell">
+      <div className="auth-card">
+        <div className="branding">
+          <h1>SkyTicket</h1>
+          <p>Quản lý đăng nhập và đăng ký vé máy bay với giao diện thẩm mỹ, đơn giản, chuẩn web bán vé.</p>
         </div>
-        <div>
-          <label>Flight ID <input value={form.flightId} onChange={e => setForm({ ...form, flightId: e.target.value })} /></label>
+
+        <div className="switcher">
+          <button className={isLogin ? 'active' : ''} onClick={() => { setMode('login'); setMessage(null); }}>
+            Đăng nhập
+          </button>
+          <button className={!isLogin ? 'active' : ''} onClick={() => { setMode('register'); setMessage(null); }}>
+            Đăng ký
+          </button>
         </div>
-        <div>
-          <label>Quantity <input type='number' value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} /></label>
+
+        {user ? (
+          <div className="message-box success">
+            <strong>Xin chào, {user.fullName}!</strong>
+            <p>Bạn đã đăng nhập thành công. Tiếp tục đặt vé hoặc quản lý thông tin cá nhân tại backend.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            {!isLogin && (
+              <div className="form-group">
+                <label>
+                  Họ và tên
+                  <input type="text" value={authForm.fullName} onChange={handleChange('fullName')} placeholder="Nguyễn Văn A" required={!isLogin} />
+                </label>
+              </div>
+            )}
+
+            <div className="form-group">
+              <label>
+                Tên đăng nhập
+                <input type="text" value={authForm.username} onChange={handleChange('username')} placeholder="email hoặc tên đăng nhập" required />
+              </label>
+            </div>
+
+            <div className="form-group">
+              <label>
+                Mật khẩu
+                <input type="password" value={authForm.password} onChange={handleChange('password')} placeholder="Mật khẩu an toàn" required />
+              </label>
+            </div>
+
+            {!isLogin && (
+              <div className="form-group">
+                <label>
+                  Email
+                  <input type="email" value={authForm.email} onChange={handleChange('email')} placeholder="name@example.com" required />
+                </label>
+              </div>
+            )}
+
+            <div className="action-row">
+              <button type="submit" className="primary-button">
+                {isLogin ? 'Đăng nhập' : 'Tạo tài khoản'}
+              </button>
+              <span className="secondary-text">
+                {isLogin ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}
+                <button type="button" onClick={() => setMode(isLogin ? 'register' : 'login')}>
+                  {isLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
+                </button>
+              </span>
+            </div>
+          </form>
+        )}
+
+        {message && (
+          <div className={`message-box ${messageType === 'error' ? 'error' : 'success'}`}>
+            {message}
+          </div>
+        )}
+
+        <div className="auth-footer">
+          <span>
+            <strong>API sẵn sàng:</strong> POST <code>/api/auth/login</code> hoặc <code>/api/auth/register</code>
+          </span>
+          <span>
+            <strong>Backend gateway:</strong> <code>http://localhost:8080/api</code>
+          </span>
         </div>
-        <button onClick={createOrder}>Create Order</button>
-      </section>
+      </div>
     </div>
   );
 }

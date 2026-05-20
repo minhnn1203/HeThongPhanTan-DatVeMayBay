@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Đăng ký SkyTicket</title>
+    <link rel="stylesheet" href="auth-style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <div class="auth-card">
+        <h1>Đăng ký</h1>
+        <p>Tạo tài khoản để quản lý vé, đơn hàng và thông tin cá nhân dễ dàng.</p>
+
+        <form id="registerForm">
+          <div class="form-group">
+            <label for="fullName">Họ và tên</label>
+            <input id="fullName" name="fullName" type="text" placeholder="Nguyễn Văn A" required />
+          </div>
+
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="name@example.com" required />
+          </div>
+
+          <div class="form-group">
+            <label for="username">Tên đăng nhập</label>
+            <input id="username" name="username" type="text" placeholder="NguyenVanA" required />
+          </div>
+
+          <div class="form-group">
+            <label for="password">Mật khẩu</label>
+            <input id="password" name="password" type="password" placeholder="••••••••" required />
+          </div>
+
+          <button type="submit">Tạo tài khoản</button>
+        </form>
+
+        <div id="status" class="status-box" style="display:none"></div>
+
+        <div class="switch-link">
+          Đã có tài khoản? <a href="login.html">Đăng nhập</a>
+        </div>
+
+        <div class="api-hint">
+          API gửi về backend: <code>POST /api/auth/register</code>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const statusBox = document.getElementById('status');
+      const form = document.getElementById('registerForm');
+
+      function showStatus(message, type = 'success') {
+        statusBox.textContent = message;
+        statusBox.className = 'status-box ' + type;
+        statusBox.style.display = 'block';
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        statusBox.style.display = 'none';
+
+        const payload = {
+          fullName: form.fullName.value.trim(),
+          email: form.email.value.trim(),
+          username: form.username.value.trim(),
+          password: form.password.value
+        };
+
+        try {
+          const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const result = await response.json();
+
+          if (response.ok && (result.id || result.username)) {
+            showStatus('Đăng ký thành công! Bạn có thể đăng nhập ngay.', 'success');
+          } else {
+            showStatus(result.message || 'Đăng ký không thành công.', 'error');
+          }
+        } catch (error) {
+          showStatus('Không thể kết nối đến backend.', 'error');
+        }
+      });
+    </script>
+  </body>
+</html>
