@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Đăng nhập SkyTicket</title>
+    <link rel="stylesheet" href="auth-style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <div class="auth-card">
+        <h1>Đăng nhập</h1>
+        <p>Đăng nhập để tiếp tục đặt vé máy bay nhanh chóng và an toàn.</p>
+
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="username">Tên đăng nhập hoặc email</label>
+            <input id="username" name="username" type="text" placeholder="NguyenVanA" required />
+          </div>
+
+          <div class="form-group">
+            <label for="password">Mật khẩu</label>
+            <input id="password" name="password" type="password" placeholder="••••••••" required />
+          </div>
+
+          <button type="submit">Đăng nhập</button>
+        </form>
+
+        <div id="status" class="status-box" style="display:none"></div>
+
+        <div class="switch-link">
+          Chưa có tài khoản? <a href="register.html">Tạo tài khoản</a>
+        </div>
+
+        <div class="api-hint">
+          API gửi về backend: <code>POST /api/auth/login</code>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const statusBox = document.getElementById('status');
+      const form = document.getElementById('loginForm');
+
+      function showStatus(message, type = 'success') {
+        statusBox.textContent = message;
+        statusBox.className = 'status-box ' + type;
+        statusBox.style.display = 'block';
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        statusBox.style.display = 'none';
+
+        const payload = {
+          username: form.username.value.trim(),
+          password: form.password.value
+        };
+
+        try {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.token) {
+            showStatus('Đăng nhập thành công! Token đã nhận.', 'success');
+          } else {
+            showStatus(result.message || 'Đăng nhập không thành công.', 'error');
+          }
+        } catch (error) {
+          showStatus('Không thể kết nối đến backend.', 'error');
+        }
+      });
+    </script>
+  </body>
+</html>
