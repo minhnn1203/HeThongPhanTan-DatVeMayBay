@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { login, register } from './api';
 import './styles.css';
+import SearchFlightPage from './pages/SearchFlightPage';
 
 const initialAuth = {
   username: '',
@@ -28,7 +29,12 @@ function App() {
       if (mode === 'login') {
         const result = await login({ username: authForm.username, password: authForm.password });
         if (result.token) {
-          setUser({ username: authForm.username, fullName: result.fullName || authForm.username });
+          setUser({  
+            username: authForm.username,  
+            fullName: authForm.username,  
+            token: "fake-jwt-token",  
+            userId: 1
+          });
           setMessageType('success');
           setMessage('Đăng nhập thành công! Chào mừng bạn đến hệ thống bán vé.');
         } else {
@@ -76,9 +82,15 @@ function App() {
         </div>
 
         {user ? (
-          <div className="message-box success">
-            <strong>Xin chào, {user.fullName}!</strong>
-            <p>Bạn đã đăng nhập thành công. Tiếp tục đặt vé hoặc quản lý thông tin cá nhân tại backend.</p>
+          <div>
+            <div className="message-box success">
+              <strong>Xin chào, {user.fullName}!</strong>
+              <p>
+                Bạn đã đăng nhập thành công.
+              </p>
+            </div>
+
+            <SearchFlightPage user={user} />
           </div>
         ) : (
           <form onSubmit={handleSubmit}>

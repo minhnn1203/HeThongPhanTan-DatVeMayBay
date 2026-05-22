@@ -34,3 +34,31 @@ export const authEndpoints = {
   register: `${apiBase}/auth/register`,
   profile: `${apiBase}/auth/me`
 };
+
+export async function getFlights() {
+  const response = await fetch(`${apiBase}/flights`);
+
+  return response.json();
+}
+
+export async function createOrder({
+  userId,
+  flightId,
+  quantity,
+  token
+}) {
+  const response = await fetch(`${apiBase}/orders`, {
+    method: 'POST',
+    headers: {
+      ...jsonHeaders,
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      userId,
+      flightId,
+      quantity
+    })
+  });
+
+  return response.json();
+}
