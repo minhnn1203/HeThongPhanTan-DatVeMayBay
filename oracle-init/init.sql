@@ -64,4 +64,69 @@ EXCEPTION WHEN OTHERS THEN
    END IF;
 END;
 /
+
+-- ============================================================
+-- DDL: USER_APP schema
+-- ============================================================
+
+-- ROLES table
+CREATE TABLE USER_APP.ROLES (
+    ID NUMBER(*, 0) GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    NAME VARCHAR2(50) NOT NULL UNIQUE
+);
+
+-- USERS table
+CREATE TABLE USER_APP.USERS (
+    ID NUMBER(*, 0) GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    USERNAME VARCHAR2(100) NOT NULL UNIQUE,
+    EMAIL VARCHAR2(255) NOT NULL UNIQUE,
+    PASSWORD VARCHAR2(255) NOT NULL,
+    FULL_NAME VARCHAR2(255),
+    ADDRESS VARCHAR2(500),
+    DATE_OF_BIRTH DATE,
+    CCCD VARCHAR2(20),
+    ENABLED NUMBER(1, 0) DEFAULT 1,
+    CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- USER_ROLES join table
+CREATE TABLE USER_APP.USER_ROLES (
+    USER_ID NUMBER(*, 0) NOT NULL,
+    ROLE_ID NUMBER(*, 0) NOT NULL,
+    PRIMARY KEY (USER_ID, ROLE_ID),
+    FOREIGN KEY (USER_ID) REFERENCES USER_APP.USERS(ID) ON DELETE CASCADE,
+    FOREIGN KEY (ROLE_ID) REFERENCES USER_APP.ROLES(ID) ON DELETE CASCADE
+);
+
+-- ============================================================
+-- DML: seed data
+-- ============================================================
+
+-- Insert roles
+INSERT INTO USER_APP.ROLES (NAME) VALUES ('ROLE_CUSTOMER');
+INSERT INTO USER_APP.ROLES (NAME) VALUES ('ROLE_ADMIN');
+COMMIT;
+
+-- Insert default admin account
+-- Password: admin123 (BCrypt encoded, cost factor 10)
+-- You can generate your own with: new BCryptPasswordEncoder().encode("admin123")
+-- Pre-computed BCrypt hash for "admin123" with strength 10:
+-- $2a$10$St1wDnAFxD7ZYq6TMPavdOIP0cL92HwIbDOUbx5ggAHADH/bHjGC6
+INSERT INTO USER_APP.USERS (USERNAME, EMAIL, PASSWORD, FULL_NAME, ADDRESS, DATE_OF_BIRTH, CCCD, ENABLED)
+VALUES (
+    'admin',
+    'admin@flightbooking.com',
+    '$2a$10$St1wDnAFxD7ZYq6TMPavdOIP0cL92HwIbDOUbx5ggAHADH/bHjGC6',
+    'Quan Tri Vien',
+    'Ha Noi, Viet Nam',
+    DATE '1990-01-01',
+    '001202300001',
+    1
+);
+
+-- Assign ADMIN role to admin user
+INSERT INTO USER_APP.USER_ROLES (USER_ID, ROLE_ID)
+SELECT u.ID, r.ID
+FROM USER_APP.USERS u, USER_APP.ROLES r
+WHERE u.USERNAME = 'admin' AND r.NAME = 'ROLE_ADMIN';
 COMMIT;

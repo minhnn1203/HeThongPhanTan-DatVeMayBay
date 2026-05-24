@@ -10,6 +10,12 @@ services:
     volumes:
       - ./oracle-init:/container-entrypoint-initdb.d
       - oracle-data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "/opt/oracle/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.1
@@ -36,52 +42,46 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-    container_name: elasticsearch
-    environment:
-      discovery.type: single-node
-      xpack.security.enabled: "false"
-      ES_JAVA_OPTS: -Xms512m -Xmx512m
-    ports:
-      - "9200:9200"
-
-  logstash:
-    image: docker.elastic.co/logstash/logstash:8.13.4
-    container_name: logstash
-    depends_on:
-      - elasticsearch
-    ports:
-      - "5044:5044"
-    volumes:
-      - ./elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.13.4
-    container_name: kibana
-    depends_on:
-      - elasticsearch
-    environment:
-      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
-    ports:
-      - "5601:5601"
-
-  filebeat:
-    image: docker.elastic.co/beats/filebeat:8.13.4
-    container_name: filebeat
-    user: root
-    command: ["--strict.perms=false"]
-    depends_on:
-      - logstash
-    volumes:
-      - ./elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - app-logs:/var/log/app:ro
-
-  zipkin:
-    image: openzipkin/zipkin:3
-    container_name: zipkin
-    ports:
-      - "9411:9411"
+  # ELK stack - commented out due to Elastic registry auth issues
+  # elasticsearch:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+  #   container_name: elasticsearch
+  #   environment:
+  #     discovery.type: single-node
+  #     xpack.security.enabled: "false"
+  #     ES_JAVA_OPTS: -Xms512m -Xmx512m
+  #   ports:
+  #     - "9200:9200"
+  #
+  # logstash:
+  #   image: docker.elastic.co/logstash/logstash:8.13.4
+  #   container_name: logstash
+  #   depends_on:
+  #     - elasticsearch
+  #   ports:
+  #     - "5044:5044"
+  #   volumes:
+  #     - ./elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
+  #
+  # kibana:
+  #   image: docker.elastic.co/kibana/kibana:8.13.4
+  #   container_name: kibana
+  #   depends_on:
+  #     - elasticsearch
+  #   environment:
+  #     ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+  #   ports:
+  #     - "5601:5601"
+  #
+  # filebeat:
+  #   image: docker.elastic.co/beats/filebeat:8.13.4
+  #   container_name: filebeat
+  #   user: root
+  #   command: ["--strict.perms=false"]
+  #   depends_on:
+  #     - logstash
+  #   volumes:
+  #     - ./elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
 
   user-service:
     build:
@@ -90,12 +90,17 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - oracle
-      - zipkin
+      oracle:
+        condition: service_healthy
+    restart: on-failure
     environment:
       - SPRING_PROFILES_ACTIVE=default
-    volumes:
-      - app-logs:/var/log/app
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8081'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   product-service:
     build:
@@ -104,13 +109,19 @@ services:
     ports:
       - "8082:8082"
     depends_on:
-      - oracle
-      - kafka
-      - zipkin
+      oracle:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: on-failure
     environment:
       - SPRING_PROFILES_ACTIVE=default
-    volumes:
-      - app-logs:/var/log/app
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8082'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   order-service:
     build:
@@ -119,15 +130,23 @@ services:
     ports:
       - "8083:8083"
     depends_on:
-      - oracle
-      - kafka
-      - user-service
-      - product-service
-      - zipkin
+      oracle:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      user-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+    restart: on-failure
     environment:
       - SPRING_PROFILES_ACTIVE=default
-    volumes:
-      - app-logs:/var/log/app
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8083'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   notification-service:
     build:
@@ -136,13 +155,19 @@ services:
     ports:
       - "8084:8084"
     depends_on:
-      - oracle
-      - kafka
-      - zipkin
+      oracle:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: on-failure
     environment:
       - SPRING_PROFILES_ACTIVE=default
-    volumes:
-      - app-logs:/var/log/app
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8084'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   gateway:
     build:
@@ -151,15 +176,22 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - user-service
-      - product-service
-      - order-service
-      - notification-service
-      - zipkin
+      user-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
     environment:
       - SPRING_PROFILES_ACTIVE=default
-    volumes:
-      - app-logs:/var/log/app
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8080'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   frontend:
     build:
@@ -168,8 +200,8 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy
 
 volumes:
   oracle-data:
-  app-logs:

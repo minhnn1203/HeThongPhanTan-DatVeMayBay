@@ -2,6 +2,8 @@
 // File này được tách riêng để không viết toàn bộ giao diện vào App.js.
 
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import './AdminFlightTicketPage.css';
 
 const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
@@ -35,6 +37,8 @@ const airportSuggestions = [
 ];
 
 function AdminFlightTicketPage() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [flights, setFlights] = useState([]);
   const [orders, setOrders] = useState([]);
   const [activeTab, setActiveTab] = useState('flights');
@@ -42,21 +46,20 @@ function AdminFlightTicketPage() {
   const [editingFlightId, setEditingFlightId] = useState(null);
   const [flightKeyword, setFlightKeyword] = useState('');
   const [ticketKeyword, setTicketKeyword] = useState('');
-  const [token, setToken] = useState(localStorage.getItem('adminJwtToken') || '');
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState({ type: '', text: '' });
 
   useEffect(() => {
     loadAll();
-  }, []);
+  }, [user?.token]);
 
   const headers = useMemo(() => {
     const baseHeaders = { 'Content-Type': 'application/json' };
-    if (token.trim()) {
-      baseHeaders.Authorization = `Bearer ${token.trim()}`;
+    if (user?.token) {
+      baseHeaders.Authorization = `Bearer ${user.token}`;
     }
     return baseHeaders;
-  }, [token]);
+  }, [user]);
 
   const stats = useMemo(() => {
     const totalSeats = flights.reduce((sum, flight) => sum + Number(flight.availableSeats || 0), 0);
@@ -147,15 +150,9 @@ function AdminFlightTicketPage() {
     }
   }
 
-  function saveToken() {
-    localStorage.setItem('adminJwtToken', token.trim());
-    setNotice({ type: 'success', text: 'Đã lưu JWT Admin vào trình duyệt.' });
-  }
-
-  function clearToken() {
-    localStorage.removeItem('adminJwtToken');
-    setToken('');
-    setNotice({ type: 'success', text: 'Đã xóa JWT Admin.' });
+  function handleLogout() {
+    logout();
+    navigate('/login');
   }
 
   function normalizeFlightPayload() {
@@ -317,17 +314,9 @@ function AdminFlightTicketPage() {
         </nav>
 
         <div className="auth-box">
-          <label>JWT Admin</label>
-          <textarea
-            rows="5"
-            placeholder="Dán token Admin vào đây nếu backend đã bật JWT"
-            value={token}
-            onChange={(event) => setToken(event.target.value)}
-          />
-          <div className="inline-actions">
-            <button className="secondary" type="button" onClick={saveToken}>Lưu token</button>
-            <button className="ghost" type="button" onClick={clearToken}>Xóa</button>
-          </div>
+          <p className="user-welcome">Xin chào, <strong>{user?.fullName || user?.username || 'Admin'}</strong></p>
+          <p className="user-email">{user?.email || ''}</p>
+          <button className="ghost" type="button" onClick={handleLogout}>Đăng xuất</button>
         </div>
       </aside>
 

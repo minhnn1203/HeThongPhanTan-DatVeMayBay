@@ -10,11 +10,11 @@ export async function login({ username, password }) {
   return response.json();
 }
 
-export async function register({ username, password, fullName, email }) {
+export async function register({ username, password, email, fullName, address, dateOfBirth, cccd }) {
   const response = await fetch(`${apiBase}/auth/register`, {
     method: 'POST',
     headers: jsonHeaders,
-    body: JSON.stringify({ username, password, fullName, email })
+    body: JSON.stringify({ username, password, email, fullName, address, dateOfBirth, cccd })
   });
   return response.json();
 }
@@ -29,36 +29,20 @@ export async function getProfile(token) {
   return response.json();
 }
 
+export async function createOrder({ userId, flightId, quantity, token }) {
+  const response = await fetch(`${apiBase}/orders`, {
+    method: 'POST',
+    headers: {
+      ...jsonHeaders,
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ userId, flightId, quantity })
+  });
+  return response.json();
+}
+
 export const authEndpoints = {
   login: `${apiBase}/auth/login`,
   register: `${apiBase}/auth/register`,
   profile: `${apiBase}/auth/me`
 };
-
-export async function getFlights() {
-  const response = await fetch(`${apiBase}/flights`);
-
-  return response.json();
-}
-
-export async function createOrder({
-  userId,
-  flightId,
-  quantity,
-  token
-}) {
-  const response = await fetch(`${apiBase}/orders`, {
-    method: 'POST',
-    headers: {
-      ...jsonHeaders,
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      userId,
-      flightId,
-      quantity
-    })
-  });
-
-  return response.json();
-}

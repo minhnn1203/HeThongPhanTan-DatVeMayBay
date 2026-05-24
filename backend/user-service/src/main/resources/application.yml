@@ -25,6 +25,10 @@ management:
       exposure:
         include: health,info,metrics
 
+jwt:
+  secret: ZmxpZ2h0LWJvb2tpbmctc2VydmljZS1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tMjU2Yml0cw==
+  expiration-ms: 86400000
+
 logging:
   file:
     name: /var/log/app/user-service.log
