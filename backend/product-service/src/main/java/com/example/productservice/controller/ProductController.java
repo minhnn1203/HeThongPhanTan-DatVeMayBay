@@ -30,20 +30,44 @@ public class ProductController {
     }
 
     @PostMapping
-    public Product create(@Validated @RequestBody Product product) {
-        return repository.save(product);
+    public ResponseEntity<Product> create(@Validated @RequestBody Product product) {
+        // Đảm bảo status mặc định nếu client không gửi
+        if (product.getStatus() == null || product.getStatus().isBlank()) {
+            product.setStatus("SCHEDULED");
+        }
+        Product saved = repository.save(product);
+        return ResponseEntity.status(201).body(saved);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Product> update(@PathVariable Long id, @Validated @RequestBody Product product) {
+    public ResponseEntity<Product> update(
+            @PathVariable Long id,
+            @Validated @RequestBody Product product) {
+ 
         return repository.findById(id)
                 .map(existing -> {
-                    existing.setName(product.getName());
+                    // ── Các field gốc ──────────────────────────────────────
+                    existing.setName(product.getName());                     // alias → flightNumber
                     existing.setOrigin(product.getOrigin());
                     existing.setDestination(product.getDestination());
                     existing.setDepartureTime(product.getDepartureTime());
-                    existing.setPrice(product.getPrice());
                     existing.setAvailableSeats(product.getAvailableSeats());
+                    existing.setPrice(product.getPrice());
+ 
+                    // ── Các field bổ sung ──────────────────────────────────
+                    if (product.getArrivalTime() != null) {
+                        existing.setArrivalTime(product.getArrivalTime());
+                    }
+                    if (product.getAirline() != null) {
+                        existing.setAirline(product.getAirline());
+                    }
+                    if (product.getAircraftType() != null) {
+                        existing.setAircraftType(product.getAircraftType());
+                    }
+                    if (product.getStatus() != null && !product.getStatus().isBlank()) {
+                        existing.setStatus(product.getStatus());
+                    }
+ 
                     return ResponseEntity.ok(repository.save(existing));
                 })
                 .orElse(ResponseEntity.notFound().build());
