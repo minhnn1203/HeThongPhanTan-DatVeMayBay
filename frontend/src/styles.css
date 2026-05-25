@@ -186,3 +186,134 @@ body {
 .auth-footer strong {
   color: var(--text);
 }
+
+/* SEARCH FLIGHT */
+
+.search-section {
+  margin-top: 32px;
+}
+
+.search-title {
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+}
+
+.search-subtitle {
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.search-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.search-grid input {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+
+.search-grid input:focus {
+  outline: none;
+  border-color: rgba(73, 197, 182, 0.8);
+  box-shadow: 0 0 0 3px rgba(73, 197, 182, 0.12);
+}
+
+.flight-list {
+  margin-top: 28px;
+  display: grid;
+  gap: 20px;
+}
+
+.flight-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  padding: 24px;
+  backdrop-filter: blur(14px);
+  transition: all 180ms ease;
+}
+
+.flight-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(73, 197, 182, 0.35);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+
+.flight-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.flight-info h3 {
+  margin: 0 0 12px;
+  font-size: 1.4rem;
+}
+
+.flight-route {
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+
+.flight-meta {
+  color: var(--text-muted);
+  display: grid;
+  gap: 6px;
+}
+
+.price-tag {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 16px;
+  text-align: right;
+}
+
+/* BOOKING */
+
+.booking-wrapper {
+  margin-top: 24px;
+}
+
+.booking-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  padding: 28px;
+  backdrop-filter: blur(18px);
+}
+
+.back-button {
+  margin-bottom: 20px;
+  border: none;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.booking-card h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.booking-summary {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 24px;
+  color: var(--text-muted);
+}
+
+.booking-summary strong {
+  color: var(--text);
+}

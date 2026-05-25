@@ -27,7 +27,19 @@ function App() {
 
     try {
       if (mode === 'login') {
-        const result = await login({ username: authForm.username, password: authForm.password });
+        // const result = await login({ username: authForm.username, password: authForm.password });
+        setUser({
+          username: authForm.username,
+          fullName: authForm.username,
+          token: "fake-jwt-token",
+          userId: 1
+        });
+
+        setMessageType('success');
+
+        setMessage(
+          'Đăng nhập thành công! Chào mừng bạn đến hệ thống bán vé.'
+        );
         if (result.token) {
           setUser({  
             username: authForm.username,  
@@ -63,7 +75,16 @@ function App() {
   };
 
   const isLogin = mode === 'login';
-
+  
+  if (user) {
+    return (
+      <div className="app-shell">
+        <div className="auth-card">
+          <SearchFlightPage user={user} />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="app-shell">
       <div className="auth-card">
