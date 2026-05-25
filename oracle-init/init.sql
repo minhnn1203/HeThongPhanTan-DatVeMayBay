@@ -1,5 +1,7 @@
 CONNECT sys/oraclepwd AS SYSDBA;
 
+ALTER SESSION SET CONTAINER = XEPDB1;
+
 BEGIN
    EXECUTE IMMEDIATE 'CREATE USER USER_APP IDENTIFIED BY userpwd';
 EXCEPTION WHEN OTHERS THEN
@@ -68,7 +70,7 @@ END;
 -- ============================================================
 -- DDL: USER_APP schema
 -- ============================================================
-
+ALTER SESSION SET CURRENT_SCHEMA = USER_APP;
 -- ROLES table
 CREATE TABLE USER_APP.ROLES (
     ID NUMBER(*, 0) GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
