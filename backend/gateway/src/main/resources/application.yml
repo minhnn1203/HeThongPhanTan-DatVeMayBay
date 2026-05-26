@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  application:
+    name: api-gateway
   main:
     allow-bean-definition-overriding: true
   cloud:
@@ -41,10 +43,20 @@ spring:
           uri: http://order-service:8083
           predicates:
             - Path=/api/orders/**
+        - id: booking-service
+          uri: http://order-service:8083
+          predicates:
+            - Path=/api/bookings/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: bookingCircuitBreaker
+                fallbackUri: forward:/fallback/booking
         - id: notification-service
           uri: http://notification-service:8084
           predicates:
             - Path=/api/notifications/**
+
 management:
   tracing:
     sampling:
@@ -55,7 +67,30 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,circuitbreakers
+  metrics:
+    tags:
+      application: api-gateway
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 5
+        slowCallDurationThreshold: 2s
+        slowCallRateThreshold: 100
+        recordExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+    instances:
+      bookingCircuitBreaker:
+        baseConfig: default
+        slidingWindowSize: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
 
 logging:
   file:

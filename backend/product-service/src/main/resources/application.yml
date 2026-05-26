@@ -2,6 +2,8 @@ server:
   port: 8082
 
 spring:
+  application:
+    name: product-service
   datasource:
     url: jdbc:oracle:thin:@oracle:1521/XEPDB1
     username: PRODUCT_APP
@@ -36,8 +38,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,circuitbreakers
 
 logging:
   file:
     name: /var/log/app/flight-service.log
+  level:
+    com.example.productservice: DEBUG

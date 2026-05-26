@@ -2,6 +2,8 @@ server:
   port: 8081
 
 spring:
+  application:
+    name: user-service
   datasource:
     url: jdbc:oracle:thin:@oracle:1521/XEPDB1
     username: USER_APP
@@ -23,7 +25,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,circuitbreakers
 
 jwt:
   secret: ZmxpZ2h0LWJvb2tpbmctc2VydmljZS1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tMjU2Yml0cw==
@@ -32,3 +34,6 @@ jwt:
 logging:
   file:
     name: /var/log/app/user-service.log
+  level:
+    com.example.userservice: DEBUG
+    org.springframework.security: INFO

@@ -2,6 +2,8 @@ server:
   port: 8084
 
 spring:
+  application:
+    name: notification-service
   datasource:
     url: jdbc:oracle:thin:@oracle:1521/XEPDB1
     username: NOTIF_APP
@@ -10,8 +12,12 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.OracleDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: true
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
   kafka:
     bootstrap-servers: kafka:9092
     consumer:
@@ -19,9 +25,9 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: com.example.notificationservice.event
+        spring.json.trusted.packages: com.example.notificationservice.event,com.example.orderservice.event
         spring.json.use.type.headers: false
-        spring.json.value.default.type: com.example.notificationservice.event.BookingConfirmedEvent
+        spring.json.type.mapping: booking.confirmed:com.example.notificationservice.event.BookingConfirmedEvent,admin.notification:com.example.notificationservice.event.AdminNotificationEvent
 
 management:
   tracing:
@@ -33,8 +39,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,circuitbreakers
 
 logging:
   file:
     name: /var/log/app/email-service.log
+  level:
+    com.example.notificationservice: DEBUG

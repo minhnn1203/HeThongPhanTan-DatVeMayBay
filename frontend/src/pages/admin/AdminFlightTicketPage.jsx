@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import NotificationBell from '../../components/NotificationBell';
 import './AdminFlightTicketPage.css';
 
 const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
@@ -331,6 +332,7 @@ function AdminFlightTicketPage() {
           <button className="primary" type="button" onClick={loadAll} disabled={loading}>
             {loading ? 'Đang tải...' : 'Làm mới dữ liệu'}
           </button>
+          <NotificationBell token={user?.token} />
         </header>
 
         {notice.text && <div className={`notice ${notice.type}`}>{notice.text}</div>}

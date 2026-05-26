@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { login } from '../api';
+import { login, getProfile } from '../api';
 
 export default function LoginPage() {
   const [form, setForm] = useState({ username: '', password: '' });
@@ -29,11 +29,23 @@ export default function LoginPage() {
       const result = await login({ username: form.username, password: form.password });
 
       if (result.token || result.jwt) {
+        const token = result.token || result.jwt;
+
+        // Fetch full user profile to get user.id
+        let userId = null;
+        try {
+          const profile = await getProfile(token);
+          userId = profile.id;
+        } catch {
+          // profile fetch failed, continue without userId
+        }
+
         const userData = {
+          id: userId,
           username: result.username || form.username,
           fullName: result.fullName || result.username || form.username,
           email: result.email || '',
-          token: result.token || result.jwt,
+          token: token,
           roles: result.roles || []
         };
         authLogin(userData);

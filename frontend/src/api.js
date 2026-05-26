@@ -1,6 +1,17 @@
 const apiBase = 'http://localhost:8080/api';
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
+function handleResponse(response) {
+  if (!response.ok) {
+    return response.json().then(err => { throw new Error(err.error || err.message || `HTTP ${response.status}`); });
+  }
+  return response.json();
+}
+
+function authHeaders(token) {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // ----- Auth -----
 export async function login({ username, password }) {
   const response = await fetch(`${apiBase}/auth/login`, {
@@ -40,6 +51,29 @@ export async function createOrder({ userId, flightId, quantity, token }) {
     body: JSON.stringify({ userId, flightId, quantity })
   });
   return response.json();
+}
+
+export async function createBooking({ userId, flightId, quantity, token }) {
+  const response = await fetch(`${apiBase}/bookings`, {
+    method: 'POST',
+    headers: {
+      ...jsonHeaders,
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ userId, flightId, quantity })
+  });
+  return handleResponse(response);
+}
+
+export async function getMyBookings(userId, token) {
+  const response = await fetch(`${apiBase}/bookings?userId=${userId}`, {
+    method: 'GET',
+    headers: {
+      ...jsonHeaders,
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+  return handleResponse(response);
 }
 
 // ─── Flights (GET /api/flights → ProductController → ProductRepository → Product) ──
@@ -110,6 +144,39 @@ export async function updateFlight(id, flightData, token) {
 export async function deleteFlight(id, token) {
   const response = await fetch(`${apiBase}/flights/${id}`, {
     method: 'DELETE',
+    headers: { ...jsonHeaders, ...authHeaders(token) }
+  });
+  return handleResponse(response);
+}
+
+// ----- Notifications -----
+export async function getNotifications(token) {
+  const response = await fetch(`${apiBase}/notifications/admin`, {
+    method: 'GET',
+    headers: { ...jsonHeaders, ...authHeaders(token) }
+  });
+  return handleResponse(response);
+}
+
+export async function getUnreadNotificationCount(token) {
+  const response = await fetch(`${apiBase}/notifications/admin/unread-count`, {
+    method: 'GET',
+    headers: { ...jsonHeaders, ...authHeaders(token) }
+  });
+  return handleResponse(response);
+}
+
+export async function markNotificationAsRead(id, token) {
+  const response = await fetch(`${apiBase}/notifications/${id}/read`, {
+    method: 'PATCH',
+    headers: { ...jsonHeaders, ...authHeaders(token) }
+  });
+  return handleResponse(response);
+}
+
+export async function markAllNotificationsAsRead(token) {
+  const response = await fetch(`${apiBase}/notifications/read-all`, {
+    method: 'PATCH',
     headers: { ...jsonHeaders, ...authHeaders(token) }
   });
   return handleResponse(response);

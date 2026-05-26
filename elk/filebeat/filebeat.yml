@@ -1,14 +1,83 @@
 filebeat.inputs:
   - type: filestream
-    id: spring-service-logs
+    id: user-service-logs
     paths:
-      - /var/log/app/*.log
+      - /var/log/app/user-service*.log
     parsers:
-      - multiline:
-          type: pattern
-          pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
-          negate: true
-          match: after
+      - ndjson:
+          add_error_key: true
+          add_fields:
+            fields:
+              application: user-service
+    fields:
+      application: user-service
+    fields_under_root: false
+
+  - type: filestream
+    id: product-service-logs
+    paths:
+      - /var/log/app/flight-service*.log
+    parsers:
+      - ndjson:
+          add_error_key: true
+          add_fields:
+            fields:
+              application: product-service
+    fields:
+      application: product-service
+    fields_under_root: false
+
+  - type: filestream
+    id: order-service-logs
+    paths:
+      - /var/log/app/order-service*.log
+    parsers:
+      - ndjson:
+          add_error_key: true
+          add_fields:
+            fields:
+              application: order-service
+    fields:
+      application: order-service
+    fields_under_root: false
+
+  - type: filestream
+    id: notification-service-logs
+    paths:
+      - /var/log/app/email-service*.log
+    parsers:
+      - ndjson:
+          add_error_key: true
+          add_fields:
+            fields:
+              application: notification-service
+    fields:
+      application: notification-service
+    fields_under_root: false
+
+  - type: filestream
+    id: gateway-logs
+    paths:
+      - /var/log/app/api-gateway*.log
+    parsers:
+      - ndjson:
+          add_error_key: true
+          add_fields:
+            fields:
+              application: api-gateway
+    fields:
+      application: api-gateway
+    fields_under_root: false
+
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
 
 output.logstash:
   hosts: ["logstash:5044"]
+  ssl.enabled: false
+
+logging.level: info
+logging.to_files: false
