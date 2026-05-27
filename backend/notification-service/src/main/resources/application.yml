@@ -20,14 +20,10 @@ spring:
       continue-on-error: true
   kafka:
     bootstrap-servers: kafka:9092
-    consumer:
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: com.example.notificationservice.event,com.example.orderservice.event
-        spring.json.use.type.headers: false
-        spring.json.type.mapping: booking.confirmed:com.example.notificationservice.event.BookingConfirmedEvent,admin.notification:com.example.notificationservice.event.AdminNotificationEvent
+
+telegram:
+  bot-token: ${TELEGRAM_BOT_TOKEN:8980252295:AAG5-RaEscsx3kLAGICCIAdVUyT51evoshQ}
+  chat-id: ${TELEGRAM_CHAT_ID:1884904153}
 
 management:
   tracing:

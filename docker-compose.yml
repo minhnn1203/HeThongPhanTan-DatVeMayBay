@@ -237,6 +237,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      user-service:
+        condition: service_started
     restart: on-failure
     environment:
       - SPRING_PROFILES_ACTIVE=default

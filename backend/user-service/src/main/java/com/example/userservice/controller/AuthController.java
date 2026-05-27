@@ -86,6 +86,7 @@ public class AuthController {
             "username", user.getUsername(),
             "email", user.getEmail(),
             "fullName", user.getFullName() != null ? user.getFullName() : user.getUsername(),
+            "telegramChatId", user.getTelegramChatId() != null ? user.getTelegramChatId() : "",
             "roles", roles.stream().map(Role::getName).toList()
         ));
     }
@@ -115,6 +116,7 @@ public class AuthController {
         response.put("address", user.getAddress());
         response.put("dateOfBirth", user.getDateOfBirth());
         response.put("cccd", user.getCccd());
+        response.put("telegramChatId", user.getTelegramChatId());
         response.put("roles", user.getRoles().stream().map(Role::getName).toList());
 
         return ResponseEntity.ok(response);

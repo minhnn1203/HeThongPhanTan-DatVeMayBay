@@ -36,6 +36,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/{id}").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/users/*/telegram").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

@@ -36,6 +36,9 @@ public class User {
     @Column(name = "CCCD")
     private String cccd;
 
+    @Column(name = "TELEGRAM_CHAT_ID")
+    private String telegramChatId;
+
     private Boolean enabled = true;
 
     @Column(name = "CREATED_AT")
@@ -120,6 +123,14 @@ public class User {
 
     public void setCccd(String cccd) {
         this.cccd = cccd;
+    }
+
+    public String getTelegramChatId() {
+        return telegramChatId;
+    }
+
+    public void setTelegramChatId(String telegramChatId) {
+        this.telegramChatId = telegramChatId;
     }
 
     public Boolean getEnabled() {

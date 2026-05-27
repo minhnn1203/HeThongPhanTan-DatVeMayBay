@@ -7,6 +7,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -51,6 +52,17 @@ public class UserController {
                 .map(existing -> {
                     repository.delete(existing);
                     return ResponseEntity.noContent().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}/telegram")
+    public ResponseEntity<?> updateTelegramChatId(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return repository.findById(id)
+                .map(user -> {
+                    user.setTelegramChatId(body.get("telegramChatId"));
+                    repository.save(user);
+                    return ResponseEntity.ok(Map.of("message", "Telegram chat ID updated"));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

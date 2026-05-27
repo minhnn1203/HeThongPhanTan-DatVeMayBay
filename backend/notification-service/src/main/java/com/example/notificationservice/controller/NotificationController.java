@@ -48,6 +48,37 @@ public class NotificationController {
         return all.size() > limit ? all.subList(0, limit) : all;
     }
 
+    @PostMapping("/admin")
+    public ResponseEntity<Notification> saveAdminNotification(@RequestBody Map<String, Object> payload) {
+        Long orderId = toLong(payload.get("orderId"));
+        Long flightId = toLong(payload.get("flightId"));
+        String passengerName = String.valueOf(payload.get("passengerName"));
+        String customerEmail = String.valueOf(payload.get("customerEmail"));
+        Integer quantity = toInt(payload.get("quantity"));
+        Double totalAmount = toDouble(payload.get("totalAmount"));
+        String status = String.valueOf(payload.get("status"));
+
+        if ("null".equals(passengerName)) passengerName = "Unknown";
+        if ("null".equals(customerEmail)) customerEmail = "N/A";
+        if ("null".equals(status)) status = "UNKNOWN";
+
+        String message = String.format(
+                "[ADMIN ALERT] New booking #%d - Passenger: %s | Flight ID: %d | Seats: %d | Amount: %.0f VND | Status: %s | Customer: %s",
+                orderId, passengerName, flightId, quantity, totalAmount, status, customerEmail);
+
+        Notification notification = new Notification(
+                orderId,
+                flightId,
+                message,
+                ADMIN_TYPE,
+                "admin@flightbooking.com",
+                status
+        );
+
+        Notification saved = repository.save(notification);
+        return ResponseEntity.ok(saved);
+    }
+
     @PatchMapping("/{id}/read")
     public ResponseEntity<Notification> markAsRead(@PathVariable Long id) {
         return repository.findById(id)
@@ -64,5 +95,23 @@ public class NotificationController {
         unread.forEach(n -> n.setRead(true));
         repository.saveAll(unread);
         return ResponseEntity.ok(Map.of("message", "All notifications marked as read", "count", String.valueOf(unread.size())));
+    }
+
+    private Long toLong(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number) return ((Number) value).longValue();
+        try { return Long.parseLong(String.valueOf(value)); } catch (Exception e) { return null; }
+    }
+
+    private Integer toInt(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number) return ((Number) value).intValue();
+        try { return Integer.parseInt(String.valueOf(value)); } catch (Exception e) { return null; }
+    }
+
+    private Double toDouble(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number) return ((Number) value).doubleValue();
+        try { return Double.parseDouble(String.valueOf(value)); } catch (Exception e) { return null; }
     }
 }
