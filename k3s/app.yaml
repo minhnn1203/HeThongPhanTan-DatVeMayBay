@@ -1,0 +1,627 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flight-booking
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oracle-init
+  namespace: flight-booking
+data:
+  init.sql: |
+    CONNECT sys/oraclepwd AS SYSDBA;
+
+    ALTER SESSION SET CONTAINER = XEPDB1;
+
+    BEGIN
+       EXECUTE IMMEDIATE 'CREATE USER USER_APP IDENTIFIED BY userpwd';
+    EXCEPTION WHEN OTHERS THEN
+       IF SQLCODE != -01920 THEN
+          RAISE;
+       END IF;
+    END;
+    /
+    BEGIN
+       EXECUTE IMMEDIATE 'GRANT CONNECT, RESOURCE, CREATE SESSION, CREATE TABLE, CREATE SEQUENCE, CREATE VIEW, CREATE PROCEDURE, UNLIMITED TABLESPACE TO USER_APP';
+    EXCEPTION WHEN OTHERS THEN
+       IF SQLCODE != -01920 THEN
+          RAISE;
+       END IF;
+    END;
+    /
+    BEGIN
+       EXECUTE IMMEDIATE 'CREATE USER PRODUCT_APP IDENTIFIED BY productpwd';
+    EXCEPTION WHEN OTHERS THEN
+       IF SQLCODE != -01920 THEN
+          RAISE;
+       END IF;
+    END;
+    /
+    BEGIN
+       EXECUTE IMMEDIATE 'GRANT CONNECT, RESOURCE, CREATE SESSION, CREATE TABLE, CREATE SEQUENCE, CREATE VIEW, CREATE PROCEDURE, UNLIMITED TABLESPACE TO PRODUCT_APP';
+    EXCEPTION WHEN OTHERS THEN
+       IF SQLCODE != -01920 THEN
+          RAISE;
+       END IF;
+    END;
+    /
+    BEGIN
+       EXECUTE IMMEDIATE 'CREATE USER ORDER_APP IDENTIFIED BY orderpwd';
+    EXCEPTION WHEN OTHERS THEN
+       IF SQLCODE != -01920 THEN
+          RAISE;
+       END IF;
+    END;
+    /
+    BEGIN
+       EXECUTE IMMEDIATE 'GRANT CONNECT, RESOURCE, CREATE SESSION, CREATE TABLE, CREATE SEQUENCE, CREATE VIEW, CREATE PROCEDURE, UNLIMITED TABLESPACE TO ORDER_APP';
+    EXCEPTION WHEN OTHERS THEN
+       IF SQLCODE != -01920 THEN
+          RAISE;
+       END IF;
+    END;
+    /
+    BEGIN
+       EXECUTE IMMEDIATE 'CREATE USER NOTIF_APP IDENTIFIED BY notifpwd';
+    EXCEPTION WHEN OTHERS THEN
+       IF SQLCODE != -01920 THEN
+          RAISE;
+       END IF;
+    END;
+    /
+    BEGIN
+       EXECUTE IMMEDIATE 'GRANT CONNECT, RESOURCE, CREATE SESSION, CREATE TABLE, CREATE SEQUENCE, CREATE VIEW, CREATE PROCEDURE, UNLIMITED TABLESPACE TO NOTIF_APP';
+    EXCEPTION WHEN OTHERS THEN
+       IF SQLCODE != -01920 THEN
+          RAISE;
+       END IF;
+    END;
+    /
+
+    ALTER SESSION SET CURRENT_SCHEMA = USER_APP;
+
+    CREATE TABLE USER_APP.ROLES (
+        ID NUMBER(*, 0) GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        NAME VARCHAR2(50) NOT NULL UNIQUE
+    );
+
+    CREATE TABLE USER_APP.USERS (
+        ID NUMBER(*, 0) GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        USERNAME VARCHAR2(100) NOT NULL UNIQUE,
+        EMAIL VARCHAR2(255) NOT NULL UNIQUE,
+        PASSWORD VARCHAR2(255) NOT NULL,
+        FULL_NAME VARCHAR2(255),
+        ADDRESS VARCHAR2(500),
+        DATE_OF_BIRTH DATE,
+        CCCD VARCHAR2(20),
+        ENABLED NUMBER(1, 0) DEFAULT 1,
+        CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE USER_APP.USER_ROLES (
+        USER_ID NUMBER(*, 0) NOT NULL,
+        ROLE_ID NUMBER(*, 0) NOT NULL,
+        PRIMARY KEY (USER_ID, ROLE_ID),
+        FOREIGN KEY (USER_ID) REFERENCES USER_APP.USERS(ID) ON DELETE CASCADE,
+        FOREIGN KEY (ROLE_ID) REFERENCES USER_APP.ROLES(ID) ON DELETE CASCADE
+    );
+
+    INSERT INTO USER_APP.ROLES (NAME) VALUES ('ROLE_CUSTOMER');
+    INSERT INTO USER_APP.ROLES (NAME) VALUES ('ROLE_ADMIN');
+    COMMIT;
+
+    INSERT INTO USER_APP.USERS (USERNAME, EMAIL, PASSWORD, FULL_NAME, ADDRESS, DATE_OF_BIRTH, CCCD, ENABLED)
+    VALUES (
+        'admin',
+        'admin@flightbooking.com',
+        '$2a$10$St1wDnAFxD7ZYq6TMPavdOIP0cL92HwIbDOUbx5ggAHADH/bHjGC6',
+        'Quan Tri Vien',
+        'Ha Noi, Viet Nam',
+        DATE '1990-01-01',
+        '001202300001',
+        1
+    );
+
+    INSERT INTO USER_APP.USER_ROLES (USER_ID, ROLE_ID)
+    SELECT u.ID, r.ID
+    FROM USER_APP.USERS u, USER_APP.ROLES r
+    WHERE u.USERNAME = 'admin' AND r.NAME = 'ROLE_ADMIN';
+    COMMIT;
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: oracle
+  namespace: flight-booking
+spec:
+  serviceName: oracle
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oracle
+  template:
+    metadata:
+      labels:
+        app: oracle
+    spec:
+      containers:
+        - name: oracle
+          image: gvenzl/oracle-xe:21-slim
+          ports:
+            - containerPort: 1521
+              name: sql
+            - containerPort: 5500
+              name: em
+          env:
+            - name: ORACLE_PASSWORD
+              value: oraclepwd
+          volumeMounts:
+            - name: oracle-data
+              mountPath: /opt/oracle/oradata
+            - name: oracle-init
+              mountPath: /container-entrypoint-initdb.d
+              readOnly: true
+          readinessProbe:
+            tcpSocket:
+              port: 1521
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            tcpSocket:
+              port: 1521
+            initialDelaySeconds: 180
+            periodSeconds: 20
+            failureThreshold: 6
+      volumes:
+        - name: oracle-init
+          configMap:
+            name: oracle-init
+  volumeClaimTemplates:
+    - metadata:
+        name: oracle-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oracle
+  namespace: flight-booking
+spec:
+  selector:
+    app: oracle
+  ports:
+    - name: sql
+      port: 1521
+      targetPort: 1521
+    - name: em
+      port: 5500
+      targetPort: 5500
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zookeeper
+  namespace: flight-booking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zookeeper
+  template:
+    metadata:
+      labels:
+        app: zookeeper
+    spec:
+      containers:
+        - name: zookeeper
+          image: confluentinc/cp-zookeeper:7.6.1
+          ports:
+            - containerPort: 2181
+          env:
+            - name: ZOOKEEPER_CLIENT_PORT
+              value: "2181"
+            - name: ZOOKEEPER_TICK_TIME
+              value: "2000"
+          readinessProbe:
+            tcpSocket:
+              port: 2181
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper
+  namespace: flight-booking
+spec:
+  selector:
+    app: zookeeper
+  ports:
+    - port: 2181
+      targetPort: 2181
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+  namespace: flight-booking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: kafka
+          image: confluentinc/cp-kafka:7.6.1
+          ports:
+            - containerPort: 9092
+          env:
+            - name: KAFKA_BROKER_ID
+              value: "1"
+            - name: KAFKA_ZOOKEEPER_CONNECT
+              value: zookeeper:2181
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: PLAINTEXT:PLAINTEXT
+            - name: KAFKA_LISTENERS
+              value: PLAINTEXT://0.0.0.0:9092
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: PLAINTEXT://kafka:9092
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+              value: "true"
+          readinessProbe:
+            tcpSocket:
+              port: 9092
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 12
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: flight-booking
+spec:
+  selector:
+    app: kafka
+  ports:
+    - port: 9092
+      targetPort: 9092
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zipkin
+  namespace: flight-booking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zipkin
+  template:
+    metadata:
+      labels:
+        app: zipkin
+    spec:
+      containers:
+        - name: zipkin
+          image: openzipkin/zipkin:latest
+          ports:
+            - containerPort: 9411
+          env:
+            - name: STORAGE_TYPE
+              value: mem
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zipkin
+  namespace: flight-booking
+spec:
+  selector:
+    app: zipkin
+  ports:
+    - port: 9411
+      targetPort: 9411
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: flight-booking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+        - name: user-service
+          image: ngocminh123/user-service:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: default
+          volumeMounts:
+            - name: service-logs
+              mountPath: /var/log/app
+          readinessProbe:
+            tcpSocket:
+              port: 8081
+            initialDelaySeconds: 45
+            periodSeconds: 10
+            failureThreshold: 12
+      volumes:
+        - name: service-logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: flight-booking
+spec:
+  selector:
+    app: user-service
+  ports:
+    - port: 8081
+      targetPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+  namespace: flight-booking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      containers:
+        - name: product-service
+          image: ngocminh123/product-service:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: default
+          volumeMounts:
+            - name: service-logs
+              mountPath: /var/log/app
+          readinessProbe:
+            tcpSocket:
+              port: 8082
+            initialDelaySeconds: 45
+            periodSeconds: 10
+            failureThreshold: 12
+      volumes:
+        - name: service-logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: flight-booking
+spec:
+  selector:
+    app: product-service
+  ports:
+    - port: 8082
+      targetPort: 8082
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: flight-booking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+        - name: order-service
+          image: ngocminh123/order-service:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: default
+          volumeMounts:
+            - name: service-logs
+              mountPath: /var/log/app
+          readinessProbe:
+            tcpSocket:
+              port: 8083
+            initialDelaySeconds: 45
+            periodSeconds: 10
+            failureThreshold: 12
+      volumes:
+        - name: service-logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: flight-booking
+spec:
+  selector:
+    app: order-service
+  ports:
+    - port: 8083
+      targetPort: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: flight-booking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: ngocminh123/notification-service:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8084
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: default
+          volumeMounts:
+            - name: service-logs
+              mountPath: /var/log/app
+          readinessProbe:
+            tcpSocket:
+              port: 8084
+            initialDelaySeconds: 45
+            periodSeconds: 10
+            failureThreshold: 12
+      volumes:
+        - name: service-logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: flight-booking
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - port: 8084
+      targetPort: 8084
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: flight-booking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: ngocminh123/gateway:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: default
+          volumeMounts:
+            - name: service-logs
+              mountPath: /var/log/app
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 12
+      volumes:
+        - name: service-logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: flight-booking
+spec:
+  type: NodePort
+  selector:
+    app: gateway
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: flight-booking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ngocminh123/frontend:v2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: flight-booking
+spec:
+  type: NodePort
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30000
