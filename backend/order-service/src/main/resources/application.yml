@@ -13,6 +13,10 @@ spring:
     database-platform: org.hibernate.dialect.OracleDialect
     hibernate:
       ddl-auto: update
+    properties:
+      hibernate:
+        jdbc:
+          use_get_generated_keys: true
     show-sql: true
   kafka:
     bootstrap-servers: kafka:9092

@@ -12,7 +12,11 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.OracleDialect
     hibernate:
-      ddl-auto: none
+      ddl-auto: update
+    properties:
+      hibernate:
+        jdbc:
+          use_get_generated_keys: true
     show-sql: true
   sql:
     init:

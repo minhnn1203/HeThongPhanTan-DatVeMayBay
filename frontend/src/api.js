@@ -1,11 +1,24 @@
-const apiBase = 'http://localhost:8080/api';
+const apiBase = process.env.REACT_APP_API_BASE_URL;
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
-function handleResponse(response) {
-  if (!response.ok) {
-    return response.json().then(err => { throw new Error(err.error || err.message || `HTTP ${response.status}`); });
+async function handleResponse(response) {
+  const text = await response.text();
+  let data = null;
+
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
   }
-  return response.json();
+
+  if (!response.ok) {
+    const errorMessage = typeof data === 'string'
+      ? data
+      : data?.error || data?.message || response.statusText || `HTTP ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return data;
 }
 
 function authHeaders(token) {

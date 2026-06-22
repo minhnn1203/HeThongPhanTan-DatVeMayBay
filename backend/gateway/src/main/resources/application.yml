@@ -9,10 +9,13 @@ spring:
   cloud:
     gateway:
       globalcors:
+        add-to-simple-url-handler-mapping: true
         cors-configurations:
           '[/**]':
             allowedOriginPatterns:
               - "http://localhost:3000"
+              - "http://192.168.180.11:30000"
+              - "http://192.168.180.12:30000"
             allowedMethods:
               - GET
               - POST
