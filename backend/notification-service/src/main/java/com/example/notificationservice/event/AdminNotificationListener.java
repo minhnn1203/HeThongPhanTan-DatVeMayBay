@@ -2,11 +2,13 @@ package com.example.notificationservice.event;
 
 import com.example.notificationservice.entity.Notification;
 import com.example.notificationservice.repository.NotificationRepository;
+import com.example.notificationservice.service.TelegramService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -16,9 +18,14 @@ public class AdminNotificationListener {
     private static final String RECIPIENT_TYPE = "ADMIN";
 
     private final NotificationRepository repository;
+    private final TelegramService telegramService;
 
-    public AdminNotificationListener(NotificationRepository repository) {
+    @Value("${telegram.chat-id:1884904153}")
+    private String telegramChatId;
+
+    public AdminNotificationListener(NotificationRepository repository, TelegramService telegramService) {
         this.repository = repository;
+        this.telegramService = telegramService;
     }
 
     @KafkaListener(topics = KafkaTopics.ADMIN_NOTIFICATION, groupId = "notification-service")
@@ -28,7 +35,6 @@ public class AdminNotificationListener {
             objectMapper.registerModule(new JavaTimeModule());
             objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-            // Try to parse as AdminNotificationEvent first
             AdminNotificationEvent event = objectMapper.readValue(payload, AdminNotificationEvent.class);
 
             String message = String.format(
@@ -46,6 +52,8 @@ public class AdminNotificationListener {
             );
             repository.save(notification);
             logger.info("Admin notification saved: orderId={}, status={}", event.getOrderId(), event.getStatus());
+
+            telegramService.sendMessage(telegramChatId, message);
         } catch (Exception e) {
             logger.error("Failed to process admin notification from topic='{}': {}",
                     KafkaTopics.ADMIN_NOTIFICATION, e.getMessage());
